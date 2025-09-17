@@ -36,7 +36,11 @@ func GetDiff(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "snapshot 2 not found", http.StatusNotFound)
 			return
 		}
-
+		// Ensure both snapshots belong to the same host
+		if snap1.IP != snap2.IP {
+			http.Error(w, "snapshots belong to different hosts", http.StatusBadRequest)
+			return
+		}
 		//Compute diff
 		diff := services.DiffSnapshots(snap1, snap2)
 
