@@ -37,20 +37,7 @@ The **Host Diff Tool** provides a simple way to ingest host snapshots at differe
 
 ## Running the Project
 
-### 1. Run with Docker (Recommended)
-
-From the project root:
-
-```bash
-docker-compose up --build
-```
-
-- **API** will run on: [http://localhost:8080](http://localhost:8080)  
-- **UI** will run on: [http://localhost:3000](http://localhost:3000)  
-
----
-
-### 2. Run Manually (Without Docker)
+### Run Manually 
 
 #### Backend (Go API)
 ```bash
