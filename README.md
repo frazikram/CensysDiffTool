@@ -1,242 +1,153 @@
-# 🔍 Host Diff Tool (Go + React Monorepo)
+# Host Diff Tool
 
-The **Host Diff Tool** helps security engineers and network admins track changes on a host over time.  
-It compares snapshots of a host’s open services and highlights what changed (new ports, closed ports, or updated software versions).
+In security and network monitoring, understanding change over time is critical.  
+A port that was closed yesterday might be open today; a new vulnerability might appear on a service that was previously considered safe.
 
-This repository is a **monorepo** containing both:
-- **API** → Go backend
-- **UI** → React frontend
+The **Host Diff Tool** provides a simple way to ingest host snapshots at different points in time, compare them, and highlight meaningful changes.
 
 ---
 
-## 📂 Repository Structure
+## Features
+
+- Upload JSON snapshots of host data.
+- View a history of snapshots for a given host.
+- Compare any two snapshots to see changes in:
+  - Ports
+  - Services
+  - Software versions
+  - Vulnerabilities
+  - TLS configurations
+- Generate structured diff reports.
+- Web-based UI for interaction.
+
+---
+
+## Project Structure
 
 ```
-host-diff-tool/
-├── packages/
-│   ├── api/    # Go backend
-│   ├── ui/     # React frontend
-│
-├── shared/     # Optional shared schemas/utilities
-├── docker-compose.yml
-└── README.md
+/packages
+  /api     → Go backend (REST API + snapshot storage)
+  /ui      → React/TypeScript frontend
 ```
 
----
-
-## ✨ Features
-
-- Upload JSON snapshots of a host
-- Store and view snapshot history
-- Compare any two snapshots to see:
-  - ✅ New services
-  - ❌ Removed services
-  - 🔄 Changed services (e.g., software upgrades)
+- **Backend (API)**: Handles snapshot ingestion, storage (SQLite), and diff computation.
+- **Frontend (UI)**: Provides a simple interface for uploading, viewing, and comparing snapshots.
 
 ---
 
-## 📂 Snapshot Format
+## Running the Project
 
-Snapshots are JSON files with this structure:
+### 1. Run with Docker (Recommended)
 
-```json
-{
-  "timestamp": "2025-09-10T03:00:00Z",
-  "ip": "203.0.113.45",
-  "services": [
-    {
-      "port": 22,
-      "protocol": "SSH",
-      "software": {
-        "vendor": "openssh",
-        "product": "openssh",
-        "version": "8.2p1"
-      }
-    }
-  ]
-}
-```
-
----
-
-## 📊 Example Diff Output
-
-```json
-{
-  "new_services": [
-    { "port": 443, "protocol": "HTTPS", "software": { "vendor": "nginx", "version": "1.24.0" } }
-  ],
-  "removed_services": [
-    { "port": 21, "protocol": "FTP" }
-  ],
-  "changed_services": [
-    { "port": 22, "protocol": "SSH", "old_version": "8.2p1", "new_version": "9.0p1" }
-  ]
-}
-```
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- [Go](https://go.dev/) (>= 1.21)
-- [Node.js](https://nodejs.org/) (>= 18)
-- (Optional) [Docker](https://www.docker.com/) for containerized setup
-
----
-
-### Clone & Install
-
-```bash
-git clone https://github.com/yourusername/host-diff-tool.git
-cd host-diff-tool
-```
-
----
-
-### Running the Backend (Go API)
-
-```bash
-cd packages/api
-go run main.go
-```
-
-Runs on [http://localhost:4000](http://localhost:4000)
-
----
-
-### Running the Frontend (React UI)
-
-```bash
-cd packages/ui
-npm install
-npm run dev
-```
-
-Runs on [http://localhost:3000](http://localhost:3000)
-
----
-
-### Running with Docker Compose
+From the project root:
 
 ```bash
 docker-compose up --build
 ```
 
-- API → [http://localhost:4000](http://localhost:4000)  
-- UI → [http://localhost:3000](http://localhost:3000)  
+- **API** will run on: [http://localhost:8080](http://localhost:8080)  
+- **UI** will run on: [http://localhost:3000](http://localhost:3000)  
 
 ---
 
-## 📡 API Endpoints
+### 2. Run Manually (Without Docker)
 
-### `POST /snapshots`
-Upload a new snapshot file.
-
-**Request:**
-```http
-POST /snapshots
-Content-Type: application/json
+#### Backend (Go API)
+```bash
+cd packages/api
+go run cmd/server/main.go
 ```
 
-```json
-{
-  "timestamp": "2025-09-10T03:00:00Z",
-  "ip": "203.0.113.45",
-  "services": [
-    {
-      "port": 22,
-      "protocol": "SSH",
-      "software": {
-        "vendor": "openssh",
-        "product": "openssh",
-        "version": "8.2p1"
-      }
-    }
-  ]
-}
+Runs on **http://localhost:8080**
+
+#### Frontend (React/TS UI)
+```bash
+cd packages/ui
+npm install
+npm start
 ```
 
-**Response:**
-```json
-{ "message": "Snapshot stored successfully" }
-```
+Runs on **http://localhost:5173**
 
 ---
 
-### `GET /snapshots/{host}`
-Retrieve all snapshots for a given host.
+## API Endpoints
 
-**Request:**
-```http
-GET /snapshots/203.0.113.45
-```
-
-**Response:**
-```json
-[
-  {
-    "timestamp": "2025-09-10T03:00:00Z",
-    "ip": "203.0.113.45",
-    "services": [ ... ]
-  },
-  {
-    "timestamp": "2025-09-12T03:00:00Z",
-    "ip": "203.0.113.45",
-    "services": [ ... ]
-  }
-]
-```
+- `GET /health` – Health check
+- `POST /snapshots` – Upload a new snapshot (JSON)
+- `GET /snapshots/{ip}` – Get all snapshots for a host
+- `POST /compare` – Compare two snapshots and return a diff
 
 ---
 
-### `GET /diff?host=...&from=...&to=...`
-Compare two snapshots of the same host.
+## Assumptions
 
-**Request:**
-```http
-GET /diff?host=203.0.113.45&from=2025-09-10T03:00:00Z&to=2025-09-12T03:00:00Z
-```
-
-**Response:**
-```json
-{
-  "new_services": [
-    { "port": 443, "protocol": "HTTPS", "software": { "vendor": "nginx", "version": "1.24.0" } }
-  ],
-  "removed_services": [
-    { "port": 21, "protocol": "FTP" }
-  ],
-  "changed_services": [
-    { "port": 22, "protocol": "SSH", "old_version": "8.2p1", "new_version": "9.0p1" }
-  ]
-}
-```
+- Each snapshot JSON is well-formed and follows the agreed schema.
+- Host identity is based on **IP address**.
+- Snapshots are relatively small and can be stored in SQLite (no distributed DB needed at this scale).
+- No authentication required (development/demo context).
+- TLS certificate data and vulnerabilities are stored as provided, without external validation.
 
 ---
 
-## 🏗 Tech Stack
+## Testing
 
-- **Backend** → Go (net/http or Gin/Echo)
-- **Frontend** → React + Vite
-- **Storage** → JSON files (MVP), can upgrade to Postgres/Mongo
-- **Monorepo** → `packages/` directory convention
+### Manual Testing
+- Start both API and UI.  
+- Upload multiple snapshot JSON files via UI.  
+- Confirm that:
+  - Snapshots appear in history.  
+  - Selecting two snapshots shows differences clearly.  
+  - Invalid JSON upload fails gracefully.  
+
+### Automated Testing
+- **API**: Run unit tests  
+  ```bash
+  cd packages/api
+  go test ./...
+  ```
+- **UI**: Currently no automated tests are implemented.
 
 ---
 
-## 🛠 Roadmap
+## AI Techniques
 
-- [ ] Basic Go API for snapshots/diffs  
-- [ ] File-based snapshot storage  
-- [ ] React UI for uploads + diffs  
-- [ ] Database backend (Postgres/Mongo)  
-- [ ] Export diffs (PDF/HTML)  
-- [ ] Alerts for critical changes  
+- **Diff Computation Logic**:  
+  Inspired by change detection algorithms, we implemented a structured comparison of snapshots by mapping services to unique keys (`port/protocol`).  
+  - Detects **added, removed, and changed** services.  
+  - Tracks software version drift, TLS differences, and vulnerability changes.  
+
+This deterministic approach is lightweight but borrows from principles used in AI for **state comparison and anomaly detection**.
 
 ---
 
-## 📜 License
+## Future Enhancements
 
-MIT
+If given more time, we would extend the system with:
+
+- **Authentication & Multi-User Support**: Secure uploads and user-specific histories.  
+- **Search & Filtering**: Query snapshots by port, protocol, or vulnerability.  
+- **Visualization**: Graphs or timelines showing service history.  
+- **AI-powered Anomaly Detection**: Use ML to detect unusual changes (e.g., suspicious new services).  
+- **Scalability**: Migrate storage from SQLite to Postgres or a distributed DB.  
+- **Integration with Security Feeds**: Auto-enrich snapshots with live CVE data.  
+- **Exportable Reports**: PDF/CSV export of diffs for compliance or audits.  
+
+---
+
+## Getting Started
+
+1. Clone the repo  
+   ```bash
+   git clone <your_repo_url>
+   cd hostdiff
+   ```
+
+2. Run with manually as described above.  
+
+3. Upload sample snapshots from the `examples/` folder (or create your own).  
+
+4. Compare two snapshots and view the diff report.
+
+
+
